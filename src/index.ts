@@ -80,23 +80,24 @@ function convertCSV(csvText: any) : fv.fvType[] {
   let lines = csvText.split('\n');
   // Discard header line
   lines = lines.splice(1);
-  lines.forEach( l => {
-    const  s = l.split(',');    
-    let unit : fv.fvType = {
-      Shortname : s[0],
-      // ID : string; This is the key for the object
-      Name: s[2],
-      Region: s[3],
-      Web_9_0_Keyboard : s[4],
-      Version: s[5],
-      LanguageID : s[6],
-      LanguageName : s[7]
+  lines.forEach(l => {
+    if (l != '') {
+      const s = l.split(',');
+      let unit : fv.fvType = {
+        Shortname : s[0],
+        // ID : string; This is the key for the object
+        Name: s[2],
+        Region: s[3],
+        Web_9_0_Keyboard : s[4],
+        Version: s[5],
+        LanguageID : s[6],
+        LanguageName : s[7]
+      }
+      f[s[1]] = unit;
     }
-    f[s[1]] = unit;
   });
 
   return f;
-
 }
 
 /**
@@ -114,7 +115,30 @@ function compareVersions(csv: any, kmp: any) {
     } else {
       if (k.version != csv[id].Version) {
         console.error(`${id}\t${csv[id].Version}\t${k.version}`);
+
+        // Overwrite csv version
+        csv[id].Version = k.version;
       }
     }
   });
+
+  // Write csv to temp file
+  writeModifiedCSV(csv);
+}
+
+/**
+ * Write modified.csv which contains updated keyboard versions
+ * @param csv Contents of updated keyboards.csv
+ */
+
+function writeModifiedCSV(csv: any) {
+  // Header
+  fs.writeFileSync('./modified.csv', 'Shortname,ID,Name,Region,9.0 Web Keyboard,Version,Language ID,Language Name\n', 'utf8');
+  
+  for(const [id, value] of Object.entries(csv)) {
+    let c: any = value;
+    // Write a line at a time
+    let line = `${c.Shortname},${id},${c.Name},${c.Region},${c.Web_9_0_Keyboard},${c.Version},${c.LanguageID},${c.LanguageName}\n`;
+    fs.appendFileSync('./modified.csv', line);
+  }
 }
