@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Copyright 2022-2023 SIL International
 import { CommanderError, program } from 'commander';
+import * as https from 'https';
 import * as fv from './fv.js';
 import * as fs from 'fs';
 import require from './cjs-require.js';
@@ -45,6 +46,10 @@ if (options.csv && !fs.existsSync(options.csv)) {
 if (options.json && !fs.existsSync(options.json)) {
   console.error("Can't open kmp.json " + options.json);
   process.exit(1);
+} else {
+  // kmp.json not provided, so download and extract kmp.json from latest fv_all.kmp file
+  getKMP('https://keyman.com/go/package/download/keyboard/fv_all?version=12.6&update=1', 
+  './fv_all.kmp', null);
 }
 
 // Validate required parameters given
@@ -141,4 +146,15 @@ function writeModifiedCSV(csv: any) {
     let line = `${c.Shortname},${id},${c.Name},${c.Region},${c.Web_9_0_Keyboard},${c.Version},${c.LanguageID},${c.LanguageName}\n`;
     fs.appendFileSync('./modified.csv', line);
   }
+}
+
+
+function getKMP(url, dest, cb) {
+  const kmp = fs.createWriteStream(dest);
+  let request = https.get(url, function(response) {
+    response.pipe(kmp);
+    kmp.on('finish', function() {
+      kmp.close(cb);
+    });
+  });
 }

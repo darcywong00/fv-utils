@@ -15,7 +15,7 @@
       ],
       "args": [
         "-c", "./keyboards.csv",
-        "-j", "/home/darcy/src/fv-utils/kmp.json"
+        //"-j", "/home/darcy/src/fv-utils/kmp.json"
       ]
     },
     {
