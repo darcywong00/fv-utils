@@ -13,6 +13,7 @@ program
   .description("Utilities to compare kmp.json with keyboards.csv")
     .option("-c, --csv <path to keyboards.csv text file>", "path to keyboards.csv text file")
     .option("-j, --json <path to kmp.json", "path to kmp.json file")
+    .option("-k, --keyboards <path to keyboards.json", "path to keyboards.json file")
     .exitOverride();
 try {
   program.parse();
@@ -34,6 +35,9 @@ if (debugMode) {
   if (options.json) {
     console.log(`JSON file: "${options.json}"`);
   }
+  if (options.keyboards) {
+    console.log(`keyboards.json path: "${options.keyboards}"`);
+  }
   console.log('\n');
 }
 
@@ -46,10 +50,14 @@ if (options.json && !fs.existsSync(options.json)) {
   console.error("Can't open kmp.json " + options.json);
   process.exit(1);
 }
+if (options.keyboards && !fs.existsSync(options.keyboards)) {
+  console.error("Can't open keyboards.json " + options.keyboards);
+  process.exit(1);
+}
 
 // Validate required parameters given
-if (!options.csv && !options.json) {
-  console.error("Need to pass another parameters <-c> <-j>");
+if (!options.csv || !options.json || !options.keyboards) {
+  console.error("Need to pass another parameters <-c> <-j> <-k>");
   process.exit(1);
 }
 
@@ -59,21 +67,42 @@ if (!options.csv && !options.json) {
 
 const csvText = fs.readFileSync(options.csv, 'utf-8');
 const csv = convertCSV(csvText);
-let kmp;
-try {
-  kmp = require(options.json);
-} catch (e) {
-  console.error("Invalid JSON file. Exiting")
-  process.exit(1);
-}
+let kmp = readJSON(options.json);
+let keyboards = readJSON(options.keyboards);
 
+countKeyboards(csv, kmp, keyboards);
 compareVersions(csv, kmp);
+validate(kmp, keyboards);
 
 console.log('All done processing');
 
 ////////////////////////////////////////////////////////////////////
 // Processor functions
 ////////////////////////////////////////////////////////////////////
+
+function readJSON(file) {
+  let obj;
+  try {
+    obj = require(file);
+  } catch(e) {
+    console.error("Invalid JSON file ${file}. Exiting");
+    process.exit(1);
+  }
+  return obj;
+}
+
+function countKeyboards(csv, kmp, keyboards) {
+  let csvCount = Object.keys(csv).length;
+  let kmpCount = kmp.keyboards.length;
+  let keyboardsCount = keyboards.length;
+
+  if (csvCount != kmpCount) {
+    console.error(`keyboards.csv has ${csvCount} keyboards, kmp.json has ${kmpCount} keyboards`);
+  }
+  if (kmpCount != keyboardsCount) {
+    console.error(`kmp.json has ${kmpCount} keyboards, keyboards.json has ${keyboardsCount} keyboards`);
+  }
+}
 
 function convertCSV(csvText: any) : fv.fvType[] {
   let f : fv.fvType[] = [];
@@ -106,9 +135,9 @@ function convertCSV(csvText: any) : fv.fvType[] {
  * @param {any} kmp - Contents of kmp.json
  */
 function compareVersions(csv: any, kmp: any) {
-  const keyboards = kmp.keyboards;
+  const kmpKeyboards = kmp.keyboards;
   console.log('id\tkeyboard.csv\tkmp.json');
-  keyboards.forEach(k => {
+  kmpKeyboards.forEach(k => {
     let id = k.id;
     if (!csv[id]) {
       console.error(`keyboards.csv doesn't contain ${id}`);
@@ -141,4 +170,14 @@ function writeModifiedCSV(csv: any) {
     let line = `${c.Shortname},${id},${c.Name},${c.Region},${c.Web_9_0_Keyboard},${c.Version},${c.LanguageID},${c.LanguageName}\n`;
     fs.appendFileSync('./modified.csv', line);
   }
+}
+
+// Checks 1-to-1 between keyboards.csv and keyboards.json
+function validate(csv, keyboards) {
+  csv.keyboards.forEach(c => {
+    let match = keyboards.find((k) => c.id == k.id);
+    if (!match) {
+      console.error(`keyboards.csv has ${c.id} but keyboards.json does not`);
+    }
+  })
 }
