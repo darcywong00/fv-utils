@@ -14,9 +14,10 @@
         "${workspaceFolder}/dist/**.js"
       ],
       "args": [
-        "-c", "./keyboards.csv",
-        "-j", "/home/darcy/src/fv-utils/kmp.json",
-        "-k", "/home/darcy/src/fv-utils/keyboards.json"
+        "-c", "/home/darcy/src/keymanapp/oem/firstvoices/keyboards.csv",
+        //"-j", "/home/darcy/src/fv-utils/kmp.json",
+        //"-k", "/home/darcy/src/fv-utils/keyboards.json",
+        "-m", "./KeymanMobileUpdates.csv"
       ]
     },
     {

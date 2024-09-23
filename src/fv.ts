@@ -8,3 +8,10 @@ export interface fvType {
   LanguageID : string;
   LanguageName : string;
 }
+
+export interface mobileType {
+  // Keys for KeymanMobileUpdates.csv
+  Current_Version : string;
+  Mobile_Version : string;
+  Needs_Update: boolean 
+}

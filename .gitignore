@@ -1,8 +1,9 @@
 # Dependencies
 node_modules/
 
-# Sample files for testing
-samples/
+# input files
+*.csv
+*.xlsx
 
 # Compiled Output files
 dist/
@@ -12,6 +13,3 @@ dist/
 
 # Published artifacts
 deploy/
-
-# Output
-*.SFM

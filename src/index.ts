@@ -14,6 +14,7 @@ program
     .option("-c, --csv <path to keyboards.csv text file>", "path to keyboards.csv text file")
     .option("-j, --json <path to kmp.json", "path to kmp.json file")
     .option("-k, --keyboards <path to keyboards.json", "path to keyboards.json file")
+    .option("-m, --mobile <path to KeymanMobileUpdates.csv text file>", "path to KeymanMobileUpdates.csv text file")
     .exitOverride();
 try {
   program.parse();
@@ -38,6 +39,9 @@ if (debugMode) {
   if (options.keyboards) {
     console.log(`keyboards.json path: "${options.keyboards}"`);
   }
+  if (options.mobile) {
+    console.log(`KeyboardMobileUpdates.csv path: "${options.mobile}"`);
+  }
   console.log('\n');
 }
 
@@ -54,9 +58,13 @@ if (options.keyboards && !fs.existsSync(options.keyboards)) {
   console.error("Can't open keyboards.json " + options.keyboards);
   process.exit(1);
 }
+if (options.mobile && !fs.existsSync(options.mobile)) {
+  console.error("Can't open KeymanMobileUpdates.csv text file " + options.mobile);
+  process.exit(1);
+}
 
 // Validate required parameters given
-if (!options.csv || !options.json || !options.keyboards) {
+if ((!options.mobile) && (!options.csv || !options.json || !options.keyboards)) {
   console.error("Need to pass another parameters <-c> <-j> <-k>");
   process.exit(1);
 }
@@ -67,6 +75,11 @@ if (!options.csv || !options.json || !options.keyboards) {
 
 const csvText = fs.readFileSync(options.csv, 'utf-8');
 const csv = convertCSV(csvText);
+const mobileCsvText = fs.readFileSync(options.mobile, 'utf-8');
+const mobileCsv = convertMobileCSV(mobileCsvText);
+compareMobileVersions(csv, mobileCsv);
+process.exit(1);
+
 let kmp = readJSON(options.json);
 let keyboards = readJSON(options.keyboards);
 
@@ -129,6 +142,27 @@ function convertCSV(csvText: any) : fv.fvType[] {
   return f;
 }
 
+function convertMobileCSV(mobileCsvText: any) : fv.mobileType[] {
+  let f : fv.mobileType[] = [];
+  let lines = mobileCsvText.split('\n');
+  // Discard header line
+  lines = lines.splice(1);
+  lines.forEach(l => {
+    if (l != '') {
+      const s = l.split(',');
+      let unit : fv.mobileType = {
+        // ID : string; This is the key for the object
+        Current_Version : s[1],
+        Mobile_Version : s[2],
+        Needs_Update : s[3] == "true"
+      }
+      f[s[0]] = unit;
+    }
+  });
+
+  return f;
+}
+
 /**
  * Compare keyboard versions
  * @param {any} csv - Contents of keyboards.csv
@@ -150,6 +184,31 @@ function compareVersions(csv: any, kmp: any) {
       }
     }
   });
+
+  // Write csv to temp file
+  writeModifiedCSV(csv);
+}
+
+/**
+ * Compare keyboard versions
+ * @param {any} csv - Contents of keyboards.csv
+ * @param {any} mobileCsv - Contents of KeymanMobileUpdates.csv
+ */
+function compareMobileVersions(csv: any, mobileCsv: any) {
+  console.log('id\tkeyboard.csv\tKeymanMobileUpdates.csv');
+  for (let id in mobileCsv) {
+    let k = mobileCsv[id];
+    if (!csv[id]) {
+      console.error(`keyboards.csv doesn't contain ${id}`);
+    } else {
+      if (k.Current_Version != csv[id].Version) {
+        console.error(`${id}\t${csv[id].Version}\t${k.Current_Version}`);
+
+        // Overwrite csv version
+        csv[id].Version = k.Current_Version;
+      }
+    }
+  }
 
   // Write csv to temp file
   writeModifiedCSV(csv);
